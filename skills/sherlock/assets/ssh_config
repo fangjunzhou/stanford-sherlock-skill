@@ -1,0 +1,26 @@
+# Copy these entries into your local ~/.ssh/config after replacing YOUR_SUNET_ID.
+# Merge with existing entries; OpenSSH generally uses the first value it reads.
+# Keep host-specific entries before a broad Host * block.
+Host sherlock
+    HostName login.sherlock.stanford.edu
+    User YOUR_SUNET_ID
+    ControlMaster auto
+    ControlPath ~/.ssh/%C
+    ControlPersist 10m
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    StrictHostKeyChecking ask
+    ForwardAgent no
+
+# Separate destination and connection: the login master does not authenticate DTN.
+# DTNs accept file-transfer clients, not an interactive shell.
+Host sherlock-dtn
+    HostName dtn.sherlock.stanford.edu
+    User YOUR_SUNET_ID
+    ControlMaster auto
+    ControlPath ~/.ssh/%C
+    ControlPersist 10m
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    StrictHostKeyChecking ask
+    ForwardAgent no

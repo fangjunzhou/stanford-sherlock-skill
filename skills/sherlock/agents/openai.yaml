@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sherlock"
+  short_description: "Access Sherlock and run reproducible research jobs"
+  default_prompt: "Use $sherlock to connect to Stanford Sherlock and prepare a reproducible research job."
