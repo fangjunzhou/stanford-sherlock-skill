@@ -2,11 +2,11 @@
 
 A portable skill for working with [Stanford Sherlock](https://www.sherlock.stanford.edu/docs/): connect over SSH, transfer files, prepare environments, and run CPU/GPU research jobs through Slurm. It supports agents on a local workstation and agents running inside Sherlock.
 
-The repository contains one installable skill, [sherlock](skills/sherlock/SKILL.md). It uses native SSH, rsync/SFTP, Lmod, and Slurm commands, with focused references and adaptable templates. There is no custom automation CLI or credential store.
+The repository root is the installable skill, [sherlock](SKILL.md). It uses native SSH, rsync/SFTP, Lmod, and Slurm commands, with focused references and adaptable templates. There is no custom automation CLI or credential store.
 
 ## Install
 
-Copy the **entire** `skills/sherlock` directory into a location supported by your agent. Keep its references and assets alongside `SKILL.md`.
+Clone this repository directly into a skill directory, or add it as a Git submodule. `SKILL.md`, `agents/`, `references/`, and `assets/` live at the repository root, so no nested directory needs to be copied. Keep these resources together.
 
 | Agent | Personal installation | Project installation |
 | --- | --- | --- |
@@ -14,7 +14,15 @@ Copy the **entire** `skills/sherlock` directory into a location supported by you
 | Claude Code | `~/.claude/skills/sherlock/` | `.claude/skills/sherlock/` in the research repository |
 | Other Agent Skills clients | The client's documented skill directory | The client's documented skill directory |
 
-For a fresh personal Codex installation, run **locally from this repository root**. For Claude Code, change `skill_parent` to `$HOME/.claude/skills` first:
+For a project that loads skills from `.skill/`, run from the parent project repository:
+
+```bash
+git submodule add git@github.com:fangjunzhou/stanford-sherlock-skill.git .skill/sherlock
+```
+
+Use `.agents/skills/sherlock` for Codex or `.claude/skills/sherlock` for Claude Code instead, as listed above. After cloning a project that includes the submodule, run `git submodule update --init --recursive` to populate it.
+
+For a fresh personal Codex installation by copying files, run **locally from this repository root**. For Claude Code, change `skill_parent` to `$HOME/.claude/skills` first:
 
 ```bash
 skill_parent="$HOME/.agents/skills"
@@ -22,7 +30,8 @@ mkdir -p "$skill_parent"
 if [ -e "$skill_parent/sherlock" ] || [ -L "$skill_parent/sherlock" ]; then
     printf 'Existing installation: %s; review it before updating.\n' "$skill_parent/sherlock"
 else
-    cp -R skills/sherlock "$skill_parent/sherlock"
+    mkdir -p "$skill_parent/sherlock"
+    cp -R SKILL.md agents references assets "$skill_parent/sherlock/"
 fi
 ```
 
@@ -50,16 +59,16 @@ The skill obtains account/project details when needed. Passwords, Duo codes, and
 
 | Resource | Purpose |
 | --- | --- |
-| [Skill entrypoint](skills/sherlock/SKILL.md) | Detect execution context and select the relevant workflow |
-| [Access](skills/sherlock/references/access.md) | User-operated authentication and SSH connection reuse |
-| [Storage and transfers](skills/sherlock/references/storage-and-transfers.md) | Filesystem selection, staging, DTNs, retrieval, and retention |
-| [Environments](skills/sherlock/references/environments.md) | Module discovery, Python environments, and builds |
-| [Jobs](skills/sherlock/references/jobs.md) | Interactive work, batch submission, monitoring, arrays, and completion |
-| [GPUs](skills/sherlock/references/gpu.md) | Resource discovery, GPU requests, and application checks |
-| [Troubleshooting](skills/sherlock/references/troubleshooting.md) | Focused diagnostics and support evidence |
-| [Agents on Sherlock](skills/sherlock/references/agents-on-sherlock.md) | Allocations, installation, reconnection, and specialized links |
-| [SSH configuration](skills/sherlock/assets/ssh_config) | Separate login/DTN aliases with short-lived connection reuse |
-| [CPU](skills/sherlock/assets/cpu.sbatch), [GPU](skills/sherlock/assets/gpu.sbatch), [array](skills/sherlock/assets/array.sbatch) | Small Slurm smoke jobs to adapt to real workloads |
+| [Skill entrypoint](SKILL.md) | Detect execution context and select the relevant workflow |
+| [Access](references/access.md) | User-operated authentication and SSH connection reuse |
+| [Storage and transfers](references/storage-and-transfers.md) | Filesystem selection, staging, DTNs, retrieval, and retention |
+| [Environments](references/environments.md) | Module discovery, Python environments, and builds |
+| [Jobs](references/jobs.md) | Interactive work, batch submission, monitoring, arrays, and completion |
+| [GPUs](references/gpu.md) | Resource discovery, GPU requests, and application checks |
+| [Troubleshooting](references/troubleshooting.md) | Focused diagnostics and support evidence |
+| [Agents on Sherlock](references/agents-on-sherlock.md) | Allocations, installation, reconnection, and specialized links |
+| [SSH configuration](assets/ssh_config) | Separate login/DTN aliases with short-lived connection reuse |
+| [CPU](assets/cpu.sbatch), [GPU](assets/gpu.sbatch), [array](assets/array.sbatch) | Small Slurm smoke jobs to adapt to real workloads |
 
 The job templates request five minutes, one CPU, and 4 GB host RAM. The GPU template additionally requests one GPU; the array template runs four items with at most two concurrently. Confirm accessible partitions and limits before use. Submit from a scratch project directory with `logs/` already created. The CPU/array templates print hostnames; the GPU template queries visible devices. Load version-pinned modules and substitute the real application when adapting them.
 
@@ -69,12 +78,12 @@ From the repository root, check shell syntax and inspect both SSH aliases withou
 
 ```bash
 (
-    for job in skills/sherlock/assets/*.sbatch; do
+    for job in assets/*.sbatch; do
         bash -n "$job" || exit 1
     done
 )
-ssh -G -F skills/sherlock/assets/ssh_config sherlock
-ssh -G -F skills/sherlock/assets/ssh_config sherlock-dtn
+ssh -G -F assets/ssh_config sherlock
+ssh -G -F assets/ssh_config sherlock-dtn
 git diff --check
 ```
 
@@ -83,7 +92,7 @@ git diff --check
 If Codex's skill-creator tooling and its PyYAML dependency are available, also run:
 
 ```bash
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/sherlock
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" .
 ```
 
 Review relative links, YAML metadata, command locations, and remote quoting when changing the package. Walk through these scenarios against the instructions:
@@ -103,8 +112,8 @@ Review relative links, YAML metadata, command locations, and remote quoting when
 
 These are user-run live checks after authentication; local validation cannot prove scheduler acceptance or GPU availability.
 
-1. Follow [access](skills/sherlock/references/access.md) to establish a session and inspect `sh_part`.
-2. Create a scratch project and `logs/`, then copy the CPU template there. Follow [jobs](skills/sherlock/references/jobs.md) to syntax-check, run `sbatch --test-only`, and submit it. Record the returned job ID.
+1. Follow [access](references/access.md) to establish a session and inspect `sh_part`.
+2. Create a scratch project and `logs/`, then copy the CPU template there. Follow [jobs](references/jobs.md) to syntax-check, run `sbatch --test-only`, and submit it. Record the returned job ID.
 3. Verify terminal accounting state/exit code and hostname output. Retrieve the logs to the intended local destination.
 4. If relevant, repeat with the bounded array template and verify all four task logs. For a GPU check, discover available features, review the request, and use the GPU template; visibility is not an application-level CUDA test.
 
